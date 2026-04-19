@@ -12,9 +12,12 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/safenana';
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
-  credentials: true
-}));
+  origin: [
+    'http://localhost:5173', 
+    'http://localhost:3000',
+    'https://safe-nana-frontend.vercel.app'
+  ]
+}))
 app.use(express.json());
 
 // Routes
