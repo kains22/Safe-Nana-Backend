@@ -30,7 +30,7 @@ app.use(express.json());
 app.use('/api/events', eventsRouter);
 app.use('/api/settings', settingsRouter);
 
-// WhatsApp webhook verification
+// WhatsApp webhook verification (Meta sends GET)
 app.get('/webhook/whatsapp', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
@@ -45,6 +45,41 @@ app.get('/webhook/whatsapp', (req, res) => {
   }
 
   return res.sendStatus(403);
+});
+
+// Receive WhatsApp webhook events (Meta sends POST)
+app.post('/webhook/whatsapp', (req, res) => {
+  const body = req.body;
+
+  if (body.object === 'whatsapp_business_account') {
+    for (const entry of body.entry || []) {
+      for (const change of entry.changes || []) {
+        const value = change.value || {};
+
+        // Incoming messages
+        for (const message of value.messages || []) {
+          console.log('WhatsApp incoming message:', {
+            from: message.from,
+            type: message.type,
+            id: message.id
+          });
+        }
+
+        // Sent-message delivery/read/failure status updates
+        for (const status of value.statuses || []) {
+          console.log('WhatsApp message status:', {
+            id: status.id,
+            status: status.status,
+            recipient: status.recipient_id
+          });
+        }
+      }
+    }
+
+    return res.sendStatus(200);
+  }
+
+  return res.sendStatus(404);
 });
 
 // Health check
