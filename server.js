@@ -6,6 +6,27 @@ const cors = require('cors');
 const eventsRouter = require('./routes/events');
 const settingsRouter = require('./routes/settings');
 
+
+/**
+ * WhatsApp webhook verification
+ */
+app.get('/webhook/whatsapp', (req, res) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+
+  if (
+    mode === 'subscribe' &&
+    token === process.env.WHATSAPP_VERIFY_TOKEN
+  ) {
+    console.log('WhatsApp webhook verified');
+    return res.status(200).send(challenge);
+  }
+
+  return res.sendStatus(403);
+});
+
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/safenana';
