@@ -8,11 +8,15 @@ const eventSchema = new mongoose.Schema({
   },
   elderlyName: {
     type: String,
-    default: 'Nana'
+    default: 'Your loved one',
+    trim: true,
+    maxlength: 100
   },
   details: {
     type: String,
-    default: ''
+    default: '',
+    trim: true,
+    maxlength: 1000
   },
   senderType: {
     type: String,
@@ -21,7 +25,8 @@ const eventSchema = new mongoose.Schema({
   },
   timestamp: {
     type: Date,
-    default: Date.now
+    default: Date.now,
+    index: true
   }
 });
 

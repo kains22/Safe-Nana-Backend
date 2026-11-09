@@ -3,116 +3,94 @@ const mongoose = require('mongoose');
 const Event = require('./models/Event');
 const Settings = require('./models/Settings');
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/safenana';
+const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
+const NAME = process.env.DEMO_ELDER_NAME || 'Margaret';
+const FAMILY_NAME = 'Sarah (Daughter)';
 
-const seedData = async () => {
-  await mongoose.connect(MONGO_URI);
-  console.log('Connected to MongoDB for seeding...');
+const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
 
-  // Clear existing data
-  await Event.deleteMany({});
-  await Settings.deleteMany({});
+// Time at a given hour of day, N days ago (never in the future)
+const at = (daysAgo, hour, minute = 0) => {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  d.setHours(hour, minute, 0, 0);
+  return d > new Date() ? new Date(Date.now() - HOUR) : d;
+};
 
-  // Create default settings
-  const settings = new Settings({
-    elderlyName: 'Nana',
-    familyWhatsApp: '+44 7700 900123',
-    familyContactName: 'Sarah (Daughter)',
-    familyContactPhone: '+44 7700 900123',
-    checkinReminderTime: '09:00'
+const buildEvents = () => {
+  const checkin = (daysAgo, hour, minute) => ({
+    type: 'checkin',
+    elderlyName: NAME,
+    details: `${NAME} confirmed they are okay today.`,
+    timestamp: at(daysAgo, hour, minute)
   });
-  await settings.save();
+  const suspicious = (daysAgo, hour, senderType, label) => ({
+    type: 'suspicious_message',
+    elderlyName: NAME,
+    senderType,
+    details: `${NAME} reported a suspicious message from ${label}.`,
+    timestamp: at(daysAgo, hour, 20)
+  });
 
-  // Create realistic mock events spanning the last 7 days
-  const now = new Date();
-  const dayMs = 24 * 60 * 60 * 1000;
-
-  const events = [
-    // Today
-    {
-      type: 'checkin',
-      elderlyName: 'Nana',
-      details: 'Nana confirmed they are okay today.',
-      timestamp: new Date(now - 2 * 60 * 60 * 1000) // 2 hours ago
-    },
-    // Yesterday
-    {
-      type: 'suspicious_message',
-      elderlyName: 'Nana',
-      senderType: 'unknown_number',
-      details: 'Nana received a suspicious message from an unknown number.',
-      timestamp: new Date(now - dayMs - 3 * 60 * 60 * 1000)
-    },
-    {
-      type: 'checkin',
-      elderlyName: 'Nana',
-      details: 'Nana confirmed they are okay today.',
-      timestamp: new Date(now - dayMs - 5 * 60 * 60 * 1000)
-    },
-    // 2 days ago
+  return [
+    checkin(0, 8, 42),                         // today
+    checkin(1, 9, 5),
+    suspicious(1, 14, 'unknown_number', 'an unknown number'),
+    checkin(2, 8, 55),
     {
       type: 'help_request',
-      elderlyName: 'Nana',
-      details: 'Nana requested help.',
-      timestamp: new Date(now - 2 * dayMs - 1 * 60 * 60 * 1000)
+      elderlyName: NAME,
+      details: `${NAME} requested help.`,
+      timestamp: at(2, 16, 10)
     },
     {
       type: 'message_sent',
-      elderlyName: 'Nana',
-      details: 'Family sent a message to Nana: "Hi Mum! Hope you\'re having a lovely day. Call us anytime! ❤️"',
-      timestamp: new Date(now - 2 * dayMs - 0.5 * 60 * 60 * 1000)
+      elderlyName: NAME,
+      details: `Family sent a message to ${NAME}: "Hi ${NAME}! Hope you're having a lovely day. Call us anytime! ❤️"`,
+      timestamp: at(2, 16, 25)
     },
-    {
-      type: 'checkin',
-      elderlyName: 'Nana',
-      details: 'Nana confirmed they are okay today.',
-      timestamp: new Date(now - 2 * dayMs - 6 * 60 * 60 * 1000)
-    },
-    // 3 days ago
-    {
-      type: 'suspicious_message',
-      elderlyName: 'Nana',
-      senderType: 'whatsapp_forward',
-      details: 'Nana received a suspicious message from a WhatsApp forward.',
-      timestamp: new Date(now - 3 * dayMs - 4 * 60 * 60 * 1000)
-    },
-    {
-      type: 'checkin',
-      elderlyName: 'Nana',
-      details: 'Nana confirmed they are okay today.',
-      timestamp: new Date(now - 3 * dayMs - 7 * 60 * 60 * 1000)
-    },
-    // 4 days ago - no checkin
-    {
-      type: 'suspicious_message',
-      elderlyName: 'Nana',
-      senderType: 'someone_i_know',
-      details: 'Nana received a suspicious message from someone they know.',
-      timestamp: new Date(now - 4 * dayMs - 2 * 60 * 60 * 1000)
-    },
-    // 5 days ago
-    {
-      type: 'checkin',
-      elderlyName: 'Nana',
-      details: 'Nana confirmed they are okay today.',
-      timestamp: new Date(now - 5 * dayMs - 8 * 60 * 60 * 1000)
-    },
-    // 6 days ago
-    {
-      type: 'checkin',
-      elderlyName: 'Nana',
-      details: 'Nana confirmed they are okay today.',
-      timestamp: new Date(now - 6 * dayMs - 9 * 60 * 60 * 1000)
-    }
+    checkin(3, 9, 30),
+    suspicious(3, 11, 'whatsapp_forward', 'a WhatsApp forward'),
+    // day 4: deliberately no check-in, to show a missed day
+    checkin(5, 8, 48),
+    checkin(6, 9, 12)
   ];
-
-  await Event.insertMany(events);
-  console.log(`✅ Seeded ${events.length} events and 1 settings document.`);
-  await mongoose.disconnect();
-  process.exit(0);
 };
 
-seedData().catch(err => {
-  console.error('Seed error:', err);
+const run = async () => {
+  if (!MONGO_URI) throw new Error('Set MONGO_URI in your environment.');
+
+  await mongoose.connect(MONGO_URI);
+  const dbName = mongoose.connection.name;
+
+  // Safety guard: never wipe a real database
+  if (!/demo/i.test(dbName) && !process.argv.includes('--force')) {
+    throw new Error(
+      `Refusing to wipe "${dbName}". Demo database names must contain "demo". ` +
+      `Use --force only if you are sure.`
+    );
+  }
+
+  await Event.deleteMany({});
+  await Settings.deleteMany({});
+
+  await Settings.create({
+    elderlyName: NAME,
+    familyWhatsApp: '+44 7700 900123',   // UK drama/test number range
+    familyContactName: FAMILY_NAME,
+    familyContactPhone: '+44 7700 900123',
+    checkinReminderTime: '09:00'
+  });
+
+  const events = buildEvents();
+  await Event.insertMany(events);
+  console.log(`✅ Demo data reset in "${dbName}": ${events.length} events for ${NAME}.`);
+
+  await mongoose.disconnect();
+};
+
+run().catch(err => {
+  console.error('Seed error:', err.message);
   process.exit(1);
 });
