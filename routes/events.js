@@ -6,8 +6,9 @@ const Settings = require('../models/Settings');
 const DEFAULT_NAME = 'Your loved one';
 const SENDER_TYPES = {
   unknown_number: 'an unknown number',
-  whatsapp_forward: 'a WhatsApp forward',
-  someone_i_know: 'someone they know'
+  whatsapp_forward: 'a WhatsApp message',
+  someone_i_know: 'someone they know',
+  not_sure: 'a sender they are not sure about'
 };
 
 const getName = async () => {

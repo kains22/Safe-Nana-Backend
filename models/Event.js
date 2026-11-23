@@ -20,7 +20,7 @@ const eventSchema = new mongoose.Schema({
   },
   senderType: {
     type: String,
-    enum: ['unknown_number', 'whatsapp_forward', 'someone_i_know', null],
+    enum: ['unknown_number', 'whatsapp_forward', 'someone_i_know', 'not_sure', null],
     default: null
   },
   timestamp: {
